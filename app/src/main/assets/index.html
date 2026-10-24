@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#101827">
+<title>Simulador Detran SP</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#141e2e;--line:#2a374b;--muted:#aab7c9;--text:#f4f7fb;--green:#22c55e;--red:#ef4444;--amber:#f59e0b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:22px 16px 18px;background:#101827;border-bottom:1px solid var(--line)}h1{font-size:23px;margin:0 0 5px}header p{color:var(--muted);font-size:13px;margin:0}
+main{max-width:760px;margin:auto;padding:14px;display:grid;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px}
+.score{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.number{font-size:40px;font-weight:800;line-height:1}.sub{color:var(--muted);font-size:13px}
+.status{font-weight:750;margin-top:10px}.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--amber)}
+.progress{height:8px;background:#2a374b;border-radius:99px;overflow:hidden;margin-top:12px}.bar{height:100%;background:var(--green);width:0%;transition:width .15s}.bar.bad{background:var(--red)}.bar.warn{background:var(--amber)}
+h2{font-size:18px;margin:0 0 12px}.group{margin-bottom:8px}.group-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 8px}.pill{font-size:12px;color:#d9e4f2;border:1px solid #40516a;border-radius:99px;padding:4px 8px;white-space:nowrap}
+.item{padding:11px 0;border-top:1px solid var(--line)}.item:first-of-type{border-top:0}.item-name{font-size:14px;line-height:1.35;margin-bottom:9px}.counter{display:flex;align-items:center;gap:12px}.count{min-width:24px;text-align:center;font-size:18px;font-weight:750}.counter button{width:38px;height:38px;border:1px solid #43536b;border-radius:10px;background:#1c293d;color:white;font-size:22px}.counter button:disabled{opacity:.35}.subtotal{color:var(--muted);font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.primary,.secondary{padding:12px 15px;border-radius:11px;font-size:14px;font-weight:700;border:1px solid var(--line)}.primary{background:#2563eb;color:white;border-color:#2563eb}.secondary{background:#1c293d;color:white}
+.note{font-size:12px;line-height:1.45;color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:11px;padding:4px 16px 24px}
+</style>
+</head>
+<body>
+<header><h1>Simulador Detran-SP</h1><p>Exame prático de direção · Categoria B · Ficha histórica</p></header>
+<main>
+<section class="panel">
+ <div class="sub">PONTOS NEGATIVOS</div>
+ <div class="score"><div id="total" class="number">0</div><div class="sub">pontos acumulados</div></div>
+ <div class="progress"><div id="bar" class="bar"></div></div>
+ <div id="status" class="status ok">APROVADO PELO CRITÉRIO DESTA FICHA</div>
+ <div id="detail" class="sub">3 pontos de margem até o limite.</div>
+</section>
+<section class="panel"><h2>Como usar</h2><p class="note">Toque em + para cada falta cometida. Use − para corrigir a quantidade. Nesta ficha histórica, qualquer falta eliminatória reprova; nas demais categorias, a soma acima de 3 pontos reprova.</p></section>
+<div id="groups"></div>
+<section class="panel">
+ <div class="actions"><button class="primary" id="reset">Zerar avaliação</button><button class="secondary" id="summary">Resumo das faltas</button></div>
+ <div id="summaryBox" class="note" style="display:none;margin-top:12px"></div>
+</section>
+<section class="panel"><p class="note"><b>Aviso:</b> este app reproduz a ficha histórica enviada pelo usuário, com referência à Resolução CONTRAN nº 168/2004. Não confirma os critérios oficiais vigentes em São Paulo em 2026. Confira as regras atuais com o Detran-SP.</p></section>
+</main><footer>Funciona offline · Simulação para estudo</footer>
+<script>
+const data=[
+{title:"Faltas eliminatórias",points:0,items:[
+"Transitar em contramão de direção","Desobedecer à sinalização semafórica e de parada obrigatória","Avançar sobre o meio-fio","Não colocar o veículo na área balizada em até três tentativas, no tempo estabelecido","Avançar sobre o balizamento demarcado durante o estacionamento na vaga","Não completar todas as etapas do exame","Avançar a via preferencial","Provocar acidente durante o exame","Exceder a velocidade regulamentada para a via","Cometer outra infração gravíssima","Art. 162, I: dirigir sem CNH, PPD ou autorização aplicável","Art. 162, II: dirigir com habilitação cassada ou suspensa"]},
+{title:"Faltas graves",points:3,items:[
+"Não observar as regras de ultrapassagem ou mudança de direção","Desobedecer à sinalização da via ou ao agente de trânsito","Não dar preferência ao pedestre na situação descrita na ficha","Manter a porta aberta ou semiaberta durante o percurso","Não sinalizar com antecedência a manobra ou sinalizá-la incorretamente","Não usar devidamente o cinto de segurança","Perder o controle da direção em movimento","Outra infração de natureza grave"]},
+{title:"Faltas médias",points:2,items:[
+"Percorrer parte do exame sem o freio de mão inteiramente livre","Trafegar em velocidade inadequada às condições do local, circulação, veículo ou clima","Interromper o funcionamento do motor sem justa razão após o início","Fazer a conversão incorretamente","Usar a buzina sem necessidade ou em local proibido","Desengrenar o veículo nos declives","Colocar o veículo em movimento sem as cautelas necessárias","Usar a embreagem antes do freio nas frenagens","Entrar em curvas com a engrenagem de tração em ponto neutro","Engrenar ou utilizar as marchas incorretamente","Outra infração de natureza média"]},
+{title:"Faltas leves",points:1,items:[
+"Provocar movimentos irregulares no veículo sem motivo justificado","Ajustar incorretamente o banco do condutor","Não ajustar devidamente os espelhos retrovisores","Apoiar o pé na embreagem com o veículo engrenado e em movimento","Utilizar ou interpretar incorretamente os instrumentos do painel","Dar partida com a engrenagem de tração ligada","Tentar movimentar o veículo com a engrenagem de tração em ponto neutro","Outra infração de natureza leve"]}
+];
+const counts=data.map(g=>g.items.map(()=>0));
+const root=document.getElementById("groups");
+data.forEach((g,gi)=>{
+ const section=document.createElement("section");section.className="panel group";
+ const head=document.createElement("div");head.className="group-title";
+ const h=document.createElement("h2");h.textContent=g.title;h.style.margin="0";
+ const pill=document.createElement("span");pill.className="pill";pill.textContent=gi===0?"Reprovação imediata":`+${g.points} pontos por falta`;
+ head.append(h,pill);section.append(head);
+ g.items.forEach((name,ii)=>{
+  const row=document.createElement("div");row.className="item";
+  const label=document.createElement("div");label.className="item-name";label.textContent=name;
+  const controls=document.createElement("div");controls.className="counter";
+  const minus=document.createElement("button");minus.textContent="−";minus.setAttribute("aria-label","Diminuir quantidade");minus.disabled=true;
+  const count=document.createElement("span");count.className="count";count.textContent="0";
+  const plus=document.createElement("button");plus.textContent="+";plus.setAttribute("aria-label","Aumentar quantidade");
+  const sub=document.createElement("span");sub.className="subtotal";sub.textContent=gi===0?"Eliminatória":"0 ponto(s)";
+  const update=()=>{count.textContent=counts[gi][ii];minus.disabled=counts[gi][ii]===0;sub.textContent=gi===0?(counts[gi][ii]?"Falta marcada":"Eliminatória"):`${counts[gi][ii]*g.points} ponto(s)`;renderSummary()};
+  minus.onclick=()=>{counts[gi][ii]=Math.max(0,counts[gi][ii]-1);update();render()};
+  plus.onclick=()=>{counts[gi][ii]++;update();render()};
+  controls.append(minus,count,plus,sub);row.append(label,controls);section.append(row);
+ });
+ root.append(section);
+});
+function render(){
+ let total=0;let elim=counts[0].some(a=>a>0);
+ counts.forEach((arr,gi)=>arr.forEach(n=>{if(gi>0)total+=n*data[gi].points}));
+ document.getElementById("total").textContent=total;
+ const status=document.getElementById("status"),detail=document.getElementById("detail"),bar=document.getElementById("bar");
+ bar.style.width=Math.min(total/3*100,100)+"%";bar.className="bar"+(elim||total>3?" bad":total===3?" warn":"");
+ if(elim){status.textContent="REPROVADO — FALTA ELIMINATÓRIA";status.className="status bad";detail.textContent="Uma ou mais faltas eliminatórias foram marcadas."}
+ else if(total>3){status.textContent="REPROVADO — MAIS DE 3 PONTOS";status.className="status bad";detail.textContent="A soma ultrapassou o limite desta ficha."}
+ else {status.textContent="APROVADO PELO CRITÉRIO DESTA FICHA";status.className="status "+(total===3?"warn":"ok");detail.textContent=`${3-total} ponto(s) de margem até o limite.`}
+ renderSummary();
+}
+function renderSummary(){
+ const box=document.getElementById("summaryBox");let lines=[];
+ data.forEach((g,gi)=>g.items.forEach((name,ii)=>{if(counts[gi][ii])lines.push(`${counts[gi][ii]}× ${name}${gi===0?" — eliminatória":` — ${counts[gi][ii]*g.points} ponto(s)`}`)}));
+ box.textContent=lines.length?lines.join(" • "):"Nenhuma falta marcada.";
+}
+document.getElementById("reset").onclick=()=>{counts.forEach(a=>a.fill(0));document.querySelectorAll(".item").forEach((row,i)=>{const gi=Number(row.closest(".panel").dataset.gi);});document.querySelectorAll(".count").forEach(el=>el.textContent="0");document.querySelectorAll(".subtotal").forEach((el)=>{const sec=el.closest(".panel");el.textContent=el.textContent.includes("Eliminatória")?"Eliminatória":"0 ponto(s)"});document.querySelectorAll(".counter button:first-child").forEach(b=>b.disabled=true);render()};
+document.getElementById("summary").onclick=()=>{const b=document.getElementById("summaryBox");b.style.display=b.style.display==="none"?"block":"none";renderSummary()};
+render();
+</script>
+</body></html>
